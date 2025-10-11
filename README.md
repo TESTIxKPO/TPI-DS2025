@@ -32,6 +32,7 @@ PASOS PARA AÑADIR EL SUBMODULO
   Simplemente necesitan ejecutar estos dos comandos en orden:
 
    1 git pull
+   
    2 git submodule update --init
 
   Con eso, su copia del repositorio estará completamente sincronizada, incluyendo el contenido del submódulo.
