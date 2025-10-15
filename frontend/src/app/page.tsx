@@ -1,6 +1,7 @@
+ 'use client'
 import { useState } from 'react';
-import ProductoForm from './componentes/ProductoForm';
-import ListaProductos from './componentes/ListaProductos';
+import ProductoForm from '../componentes/ProductoForm';
+import ListaProductos from '../componentes/ListaProductos';
 
 function App() {
   const [actualizar, setActualizar] = useState(false);
@@ -17,4 +18,3 @@ function App() {
 }
 
 export default App;
-
