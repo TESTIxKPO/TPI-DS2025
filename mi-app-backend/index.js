@@ -11,232 +11,273 @@ const PORT = process.env.PORT
 app.use(cors())
 app.use(express.json())
 
+// Middleware de autenticación
+const authenticateUser = async (req, res, next) => {
+  const authHeader = req.headers.authorization
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'No se proporcionó token de autenticación' })
+  }
+
+  const token = authHeader.split(' ')[1]
+
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token)
+    
+    if (error || !user) {
+      return res.status(401).json({ error: 'Token inválido o expirado' })
+    }
+
+    req.user = user
+    next()
+  } catch (error) {
+    return res.status(500).json({ error: 'Error al verificar autenticación' })
+  }
+}
+
 // Ruta de prueba
 app.get('/', (req, res) => {
   res.send('✅ Servidor de Stock funcionando correctamente!')
 })
 
-// EndPoint para listar productos
-app.get('/productos', async (req, res) => {
+// ============= RUTAS DE AUTENTICACIÓN =============
+
+// Registro de usuario
+app.post('/auth/registro', async (req, res) => {
+  try {
+    const { email, password, role = 'user' } = req.body
+
+    // Validaciones básicas
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email y contraseña son requeridos' })
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' })
+    }
+
+    // Crear usuario en Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password
+    })
+
+    if (authError) {
+      return res.status(400).json({ error: authError.message })
+    }
+
+    if (!authData.user) {
+      return res.status(400).json({ error: 'No se pudo crear el usuario' })
+    }
+/*
+    // Crear perfil en la tabla profiles
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .insert([
+        {
+          id: authData.user.id,
+          role: role
+        }
+      ])
+      .select()
+
+    if (profileError) {
+      console.error('Error al crear perfil:', profileError)
+      return res.status(500).json({ 
+        error: 'Usuario creado pero hubo un error al crear el perfil',
+        details: profileError.message 
+      })
+    }
+*/
+    res.status(201).json({
+      message: 'Usuario registrado exitosamente',
+      user: {
+        id: authData.user.id,
+        email: authData.user.email,
+        role: role
+      },
+      session: authData.session
+    })
+
+  } catch (error) {
+    console.error('Error en registro:', error)
+    res.status(500).json({ error: 'Error interno del servidor' })
+  }
+})
+
+// Login de usuario
+app.post('/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body
+
+    // Validaciones básicas
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email y contraseña son requeridos' })
+    }
+
+    // Autenticar con Supabase
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    })
+
+    if (error) {
+      return res.status(401).json({ error: 'Credenciales inválidas' })
+    }
+
+    // Obtener el perfil del usuario
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', data.user.id)
+      .single()
+
+    if (profileError) {
+      console.error('Error al obtener perfil:', profileError)
+    }
+
+    res.status(200).json({
+      message: 'Login exitoso',
+      user: {
+        id: data.user.id,
+        email: data.user.email,
+        role: profileData?.role || 'user'
+      },
+      session: data.session,
+      access_token: data.session.access_token
+    })
+
+  } catch (error) {
+    console.error('Error en login:', error)
+    res.status(500).json({ error: 'Error interno del servidor' })
+  }
+})
+
+// Cerrar sesión
+app.post('/auth/logout', authenticateUser, async (req, res) => {
+  try {
+    const { error } = await supabase.auth.signOut()
+
+    if (error) {
+      return res.status(400).json({ error: error.message })
+    }
+
+    res.status(200).json({ message: 'Sesión cerrada exitosamente' })
+  } catch (error) {
+    console.error('Error en logout:', error)
+    res.status(500).json({ error: 'Error interno del servidor' })
+  }
+})
+
+// Obtener perfil del usuario autenticado
+app.get('/auth/perfil', authenticateUser, async (req, res) => {
+  try {
+    const { data: profileData, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', req.user.id)
+      .single()
+
+    if (error) {
+      return res.status(404).json({ error: 'Perfil no encontrado' })
+    }
+
+    res.status(200).json({
+      user: {
+        id: req.user.id,
+        email: req.user.email,
+        role: profileData.role
+      }
+    })
+  } catch (error) {
+    console.error('Error al obtener perfil:', error)
+    res.status(500).json({ error: 'Error interno del servidor' })
+  }
+})
+
+// ============= RUTAS DE PRODUCTOS (Protegidas) =============
+
+// EndPoint para listar productos (Protegido)
+app.get('/productos', authenticateUser, async (req, res) => {
   const { data, error } = await supabase.from('productos').select('*')
   
-  
   if (error) {
-    console.error('Error al obtener productos:', error.message)
-    return res.status(500).json({ error: error.message })
-  }
-  res.json(data)
-})
-
-  // EndPoint para agregar un nuevo producto
-app.post('/agregar-producto', async (req, res) => {
-  const { nombre, descripcion, precio} = req.body
-
-  // Validar que los campos obligatorios estén presentes
-  if (!nombre || !precio) {
-    return res.status(400).json({ error: 'Faltan datos obligatorios (nombre o precio)' })
-  }
-
-  // Insertar el producto en la tabla "products"
-  const { data: producto, error } = await supabase
-    .from('productos')
-    .insert([
-      {
-        nombre: nombre,
-        descripcion: descripcion || '',
-        precio: precio
-      }
-    ])
-    .select()
-    .single()
-
-  if (error) {
-    console.error('Error al insertar producto:', error.message)
     return res.status(500).json({ error: error.message })
   }
 
-  res.status(201).json({
-    mensaje: 'Producto agregado correctamente ✅',
-    producto
-  })
+  res.status(200).json(data)
 })
 
+// EndPoint para crear producto (Protegido)
+app.post('/productos', authenticateUser, async (req, res) => {
+  try {
+    const { nombre, descripcion, precio, stock } = req.body
 
+    const { data, error } = await supabase
+      .from('productos')
+      .insert([{ nombre, descripcion, precio, stock }])
+      .select()
 
+    if (error) {
+      return res.status(400).json({ error: error.message })
+    }
 
-app.delete("/productos/:id_producto", async (req, res) => {
-  const { id_producto } = req.params;
-
-  const { data, error } = await supabase
-    .from("productos")
-    .delete()
-    .eq("id_producto", id_producto);
-
-  if (error) {
-    return res.status(500).json({ error: error.message });
+    res.status(201).json(data[0])
+  } catch (error) {
+    console.error('Error al crear producto:', error)
+    res.status(500).json({ error: 'Error interno del servidor' })
   }
+})
 
-  if (data.length === 0) {
-    return res.status(404).json({ message: "Producto no encontrado." });
+// EndPoint para actualizar producto (Protegido)
+app.put('/productos/:id', authenticateUser, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { nombre, descripcion, precio, stock } = req.body
+
+    const { data, error } = await supabase
+      .from('productos')
+      .update({ nombre, descripcion, precio, stock })
+      .eq('id', id)
+      .select()
+
+    if (error) {
+      return res.status(400).json({ error: error.message })
+    }
+
+    if (!data || data.length === 0) {
+      return res.status(404).json({ error: 'Producto no encontrado' })
+    }
+
+    res.status(200).json(data[0])
+  } catch (error) {
+    console.error('Error al actualizar producto:', error)
+    res.status(500).json({ error: 'Error interno del servidor' })
   }
+})
 
-  res.json({ message: "Producto eliminado correctamente." });
-});
+// EndPoint para eliminar producto (Protegido)
+app.delete('/productos/:id', authenticateUser, async (req, res) => {
+  try {
+    const { id } = req.params
 
-// Endpoint para editar (actualizar) un producto
-app.put("/productos/:id_producto", async (req, res) => {
-  const { id_producto } = req.params;
-  const { nombre, cantidad, precio } = req.body;
+    const { error } = await supabase
+      .from('productos')
+      .delete()
+      .eq('id', id)
 
-  if (!nombre && !cantidad && !precio) {
-    return res.status(400).json({ error: "Debes enviar al menos un campo para actualizar." });
+    if (error) {
+      return res.status(400).json({ error: error.message })
+    }
+
+    res.status(200).json({ message: 'Producto eliminado exitosamente' })
+  } catch (error) {
+    console.error('Error al eliminar producto:', error)
+    res.status(500).json({ error: 'Error interno del servidor' })
   }
-
-  const camposActualizados = {};
-  if (nombre) camposActualizados.nombre = nombre;
-  if (cantidad) camposActualizados.cantidad = cantidad;
-  if (precio) camposActualizados.precio = precio;
-
-  const { data, error } = await supabase
-    .from("productos")
-    .update(camposActualizados)
-    .eq("id_producto", id_producto)
-    .select();
-
-  if (error) {
-    return res.status(500).json({ error: error.message });
-  }
-
-  if (data.length === 0) {
-    return res.status(404).json({ message: "Producto no encontrado." });
-  }
-
-  res.json({ message: "Producto actualizado correctamente.", data });
-});
-
-
-// Crear una reserva de producto
-app.post("/reservas", async (req, res) => {
-  const { id_cliente, id_producto, cantidad } = req.body;
-
-  if (!id_cliente || !id_producto || !cantidad) {
-    return res.status(400).json({ error: "Faltan datos para realizar la reserva." });
-  }
-
-  //  Verificar si hay stock disponible
-  const { data: producto, error: errorProducto } = await supabase
-    .from("productos")
-    .select("*")
-    .eq("id_producto", id_producto)
-    .single();
-
-  if (errorProducto || !producto) {
-    return res.status(404).json({ error: "Producto no encontrado." });
-  }
-
-  if (producto.cantidad < cantidad) {
-    return res.status(400).json({ error: "No hay suficiente stock disponible." });
-  }
-
-  //  Crear la reserva
-  const { data: reserva, error: errorReserva } = await supabase
-    .from("reservas")
-    .insert([{ id_cliente, id_producto, cantidad }])
-    .select();
-
-  if (errorReserva) {
-    return res.status(500).json({ error: errorReserva.message });
-  }
-
-  // Actualizar el stock del producto
-  const nuevoStock = producto.cantidad - cantidad;
-  await supabase
-    .from("productos")
-    .update({ cantidad: nuevoStock })
-    .eq("id_producto", id_producto);
-
-  res.status(201).json({
-    message: "Reserva creada correctamente.",
-    reserva,
-    nuevoStock
-  });
-
-});
-
-// Obtener todas las reservas
-app.get("/reservas", async (req, res) => {
-  const { data, error } = await supabase
-    .from("reservas")
-    .select(`
-      id_reserva,
-      cantidad,
-      id_cliente,
-      productos ( id_producto, nombre, precio ),
-      created_at
-    `)
-    .order("id_reserva", { ascending: true });
-
-  if (error) {
-    return res.status(500).json({ error: error.message });
-  }
-
-  res.json(data);
-});
-
-
-// Eliminar una reserva y devolver el stock al producto
-app.delete("/reservas/:id_reserva", async (req, res) => {
-  const { id_reserva } = req.params;
-
-  // 1️⃣ Buscar la reserva
-  const { data: reserva, error: errorReserva } = await supabase
-    .from("reservas")
-    .select("*")
-    .eq("id_reserva", id_reserva)
-    .single();
-
-  if (errorReserva || !reserva) {
-    return res.status(404).json({ error: "Reserva no encontrada." });
-  }
-
-  // 2️⃣ Eliminar la reserva
-  const { error: errorDelete } = await supabase
-    .from("reservas")
-    .delete()
-    .eq("id_reserva", id_reserva);
-
-  if (errorDelete) {
-    return res.status(500).json({ error: errorDelete.message });
-  }
-
-  // 3️⃣ Devolver el stock al producto
-  const { data: producto, error: errorProducto } = await supabase
-    .from("productos")
-    .select("*")
-    .eq("id_producto", reserva.id_producto)
-    .single();
-
-  if (!errorProducto && producto) {
-    const nuevoStock = producto.cantidad + reserva.cantidad;
-    await supabase
-      .from("productos")
-      .update({ cantidad: nuevoStock })
-      .eq("id_producto", producto.id_producto);
-  }
-
-  res.json({ message: "Reserva eliminada correctamente y stock restaurado." });
-});
-
-
-
-
-
-
-
-
+})
 
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`)
 })
-
