@@ -1,0 +1,8 @@
+{
+    "realm": "ds-2025-realm",
+    "auth-server-url": "http://localhost:8080/",
+    "ssl-required": "none",
+    "resource": "grupo-02",
+    "public-client": true,
+    "confidential-port": 0
+}
