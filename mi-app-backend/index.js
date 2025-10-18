@@ -38,6 +38,8 @@ app.get('/', (req, res) => {
 // ============= RUTAS DE AUTENTICACIÓN =============
 
 
+//NO AÑADIR LOS ENDPOINTS DE REGISTER Y LOGOUT
+
 
 // Login de usuario
 app.post('/auth/login', async (req, res) => {
