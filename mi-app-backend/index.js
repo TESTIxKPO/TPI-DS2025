@@ -2,7 +2,7 @@
 import express from 'express'
 import cors from 'cors'
 import 'dotenv/config'
-import { supabase } from './dbConfig.js' // Asumo que tienes este archivo para la config de Supabase
+import { supabase } from './dbConfig.js' 
 import session from 'express-session'
 import Keycloak from 'keycloak-connect'
 import axios from 'axios'
@@ -12,7 +12,7 @@ const PORT = process.env.PORT
 
 const memoryStore = new session.MemoryStore()
 app.use(session( {
-  secret: 'Salmon/Secreto', // Deberías cambiar esto por una variable de entorno
+  secret: 'Salmon/Secreto', 
   resave: false,
   saveUninitialized: true,
   store: memoryStore
@@ -66,7 +66,9 @@ app.post('/auth/login', async (req, res) => {
     })
 
   } catch (error) {
-    console.error('Error en login:', error.response?.data || error.message)
+    // ... dentro del catch (error) ...
+    console.error('Error en login:', error)
+// ...
     if (error.response && error.response.status === 401){
       return res.status(401).json({error:'Credenciales invalidas'})
     }
@@ -77,7 +79,7 @@ app.post('/auth/login', async (req, res) => {
 // Obtener perfil del usuario autenticado
 app.get('/auth/perfil', keycloak.protect(), async (req, res) => {
   try {
-    // Corregido: 'access_token' en lugar de 'acces_token'
+  
     const userInfo = req.kauth.grant.access_token.content 
 
     res.status(200).json({
@@ -119,7 +121,7 @@ app.post('/productos', keycloak.protect(), async (req, res) => {
       .from('productos')
       .insert([{ nombre, descripcion, precio, stock }])
       .select()
-      .single() // Devuelve el objeto creado, no un array
+      .single() 
 
     if (error) {
       return res.status(400).json({ error: error.message })
@@ -180,7 +182,7 @@ app.delete('/productos/:id', keycloak.protect(), async (req, res) => {
       .from('productos')
       .delete()
       .eq('id', id)
-      .select() // Para verificar si se borró algo
+      .select() 
       .single()
 
     if (error) {
@@ -203,11 +205,11 @@ app.delete('/productos/:id', keycloak.protect(), async (req, res) => {
 // Estas son las rutas clave para Logística
 
 // Listar reservas (con filtros del openapi)
-app.get('/reservas', keycloak.protect(), async (req, res) => {
+app.get('/reservas',keycloak.protect(), async (req, res) => {
   try {
     const { usuarioId, estado } = req.query
     
-    // El spec dice que usuarioId es requerido
+    
     if (!usuarioId) {
         return res.status(400).json({ code: "INVALID_DATA", message: "El campo 'usuarioId' es requerido." });
     }
@@ -260,7 +262,7 @@ app.post('/reservas', keycloak.protect(), async (req, res) => {
 
   } catch (error) {
     console.error('Error al crear reserva:', error)
-    // Manejar errores de stock insuficiente (400) o conflictos (409)
+    
     res.status(500).json({ error: 'Error interno del servidor' })
   }
 })
@@ -293,11 +295,11 @@ app.get('/reservas/:id', keycloak.protect(), async (req, res) => {
   }
 })
 
-// Actualizar estado de una reserva (Ej. Logística notifica "enviado")
+
 app.patch('/reservas/:id', keycloak.protect(), async (req, res) => {
   try {
     const { id } = req.params;
-    const { usuarioId, estado } = req.body; // Según schema ActualizarReservaInput
+    const { usuarioId, estado } = req.body; 
 
     if (!usuarioId || !estado) {
       return res.status(400).json({ code: "INVALID_DATA", message: "Faltan campos 'usuarioId' o 'estado'." });
@@ -307,7 +309,7 @@ app.patch('/reservas/:id', keycloak.protect(), async (req, res) => {
       .from('reservas')
       .update({ estado })
       .eq('id', id)
-      .eq('usuarioId', usuarioId) // Verificación de propiedad
+      .eq('usuarioId', usuarioId) 
       .select()
       .single()
 
@@ -326,8 +328,7 @@ app.patch('/reservas/:id', keycloak.protect(), async (req, res) => {
 app.delete('/reservas/:id', keycloak.protect(), async (req, res) => {
   try {
     const { id } = req.params;
-    // El spec pide un body con 'motivo', pero el delete de Supabase es simple.
-    // Asumimos que la lógica de negocio (devolver stock) se maneja aquí o en un trigger.
+    
 
     const { data, error } = await supabase
       .from('reservas')
@@ -339,7 +340,7 @@ app.delete('/reservas/:id', keycloak.protect(), async (req, res) => {
     if (error) throw error;
     if (!data) return res.status(404).json({ error: 'Reserva no encontrada' });
     
-    // El spec pide 204 No Content para un DELETE exitoso
+
     res.status(204).send()
 
   } catch (error) {
