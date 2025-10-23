@@ -1,0 +1,48 @@
+# ===============================
+# ARCHIVO .gitignore RAÍZ MONOREPO
+# ===============================
+
+# --- Dependencias ---
+node_modules/
+
+# --- Entornos ---
+.env
+*.env.local
+*.env.development
+*.env.production
+
+# --- Logs ---
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Compilaciones y builds ---
+frontend/.next/
+frontend/out/
+frontend/dist/
+frontend/build/
+
+mi-app-backend/dist/
+mi-app-backend/build/
+
+# --- Cachés ---
+.cache/
+.vscode/
+.DS_Store
+
+# --- Archivos temporales ---
+*.log
+*.tmp
+*.swp
+*.swo
+
+# --- Sistemas operativos ---
+Thumbs.db
+ehthumbs.db
+Icon?
+desktop.ini
+
+# --- Coverage / pruebas ---
+coverage/
+*.lcov
