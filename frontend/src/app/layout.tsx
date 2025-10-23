@@ -4,6 +4,8 @@ import './globals.css';
 // definimos los metadatos de la aplicación
 
 import NavBar from '../componentes/Navbar/NavBar'; // Componente de la barra de navegación
+import Sidebar from '../componentes/Sidebar/Sidebar'; // Componente de la barra lateral
+import AppShell from '../componentes/Appshell/Appshell'; // Componente que maneja el layout con estado
 
 export const metadata: Metadata = {
   title: 'Mi App',
@@ -14,9 +16,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <body>
-        <NavBar />
         <main> {/* Aca va el contenido principal de la aplicación */}
-          {children} 
+          <AppShell>
+            {children} 
+          </AppShell> 
         </main>
         <footer>
           {/* Aca podes agregar información del pie de página */}

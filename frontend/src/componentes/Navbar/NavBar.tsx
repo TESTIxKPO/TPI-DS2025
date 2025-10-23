@@ -1,32 +1,40 @@
-"use client";
+// src/componentes/NavBar/NavBar.tsx
+
+"use client"; 
 import React from 'react';
 import Link from 'next/link'; 
 import './NavBar.css';       
 
-const Navbar: React.FC = () => {
+interface NavBarProps {
+  onToggleSidebar: () => void; 
+}
+
+const Navbar: React.FC<NavBarProps> = ({ onToggleSidebar }) => {
 
   const handleLogout = () => {
-    // Aquí irá la lógica para cerrar sesión
     alert('Cerrando sesión...');
   };
 
   return (
     <header className="navbar-container">
       
-      {/* Sección Izquierda: Logo o Título */}
-      <div className="navbar-brand">
-        <Link href="/"> {/* Link a la página principal */}
+      <div className="navbar-brand-container">
+        
+        {/* botón ☰  */}
+        <button onClick={onToggleSidebar} className="navbar-toggle-button">
+          ☰
+        </button>
+
+        <Link href="/" className="navbar-brand-link">
           Control de Stock
         </Link>
       </div>
 
-      {/* Sección Central (links si necesitas) */}
       <div className="navbar-links">
         {/* <Link href="/dashboard">Dashboard</Link> */}
         {/* <Link href="/inventario">Inventario</Link> */}
       </div>
 
-      {/* Sección Derecha: Botones de usuario y notificaciones */}
       <div className="navbar-actions">
         <button className="navbar-icon-button">
           🔔 {/* Ícono de Notificación */}

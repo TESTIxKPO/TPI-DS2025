@@ -1,0 +1,64 @@
+
+.sidebar-container {
+  /* Transición suave para el ancho */
+  transition: width 0.3s ease;
+  
+  /* Evita que el texto se "desborde" feo mientras se cierra */
+  overflow-x: hidden;
+  white-space: nowrap; 
+  
+  /* Estilos que ya teníamos */
+  background-color: #2c3e50; 
+  height: 100%; 
+  box-sizing: border-box;
+  border-right: 1px solid #4a5a6a; 
+}
+
+/* --- ESTADO CERRADO --- */
+.sidebar-container.closed {
+  width: 80px; /* Ancho de íconos */
+  padding: 1rem;
+}
+
+/* --- ESTADO ABIERTO --- */
+.sidebar-container.open {
+  width: 240px; /* Ancho completo */
+  padding: 1rem;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; 
+}
+
+.sidebar-link {
+  color: #ecf0f1;
+  text-decoration: none;
+  padding: 0.75rem 1rem;
+  border-radius: 5px;
+  font-size: 1.25rem; /* Un poco más grande para los íconos */
+  
+  /* Usamos Flex para alinear ícono y texto */
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* Espacio entre ícono y texto */
+}
+
+.sidebar-link:hover {
+  background-color: #34495e;
+  color: white;
+}
+
+/* --- Ocultar el texto --- */
+
+.sidebar-container.closed .sidebar-link-text {
+  display: none; /* Oculta el texto cuando está cerrado */
+  opacity: 0;
+}
+
+.sidebar-container.open .sidebar-link-text {
+  display: inline; /* Muestra el texto cuando está abierto */
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
