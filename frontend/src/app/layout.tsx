@@ -2,6 +2,9 @@ import type { Metadata } from 'next';
 // importamos los estilos globales
 import './globals.css';
 // definimos los metadatos de la aplicación
+
+import NavBar from '../componentes/Navbar/NavBar'; // Componente de la barra de navegación
+
 export const metadata: Metadata = {
   title: 'Mi App',
   description: 'Aplicación con Keycloak',
@@ -11,12 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <body>
-        <header>
-          {/* aca puedo poner mas adelante la navegacion */}
-          <nav> barra
-            {/* Aca podes agregar enlaces de navegación u otros elementos del encabezado */}
-          </nav>
-        </header>
+        <NavBar />
         <main> {/* Aca va el contenido principal de la aplicación */}
           {children} 
         </main>
